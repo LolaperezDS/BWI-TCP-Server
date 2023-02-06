@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections;
 using System.IO;
+using Players;
+using System.Text.Json;
 
 
 namespace BlockWarsServerTcp
@@ -31,79 +33,63 @@ namespace BlockWarsServerTcp
             TcpListener server = new TcpListener(IPAddress.Any, port);
             server.Start();
 
-            TcpClient[] clients = new TcpClient[countOfplayers];
-            NetworkStream[] streams = new NetworkStream[countOfplayers];
+            
+
+            Player[] players = new Player[countOfplayers];
+
             for (int i = 0; i < countOfplayers; i++)
             {
-                clients[i] = server.AcceptTcpClient();
-                streams[i] = clients[i].GetStream();
-                Console.WriteLine("Подключился " + (i + 1).ToString() + " пользователь " + clients[i].Client.RemoteEndPoint.ToString());
+                // Создание объекта игрок
+                TcpClient client = server.AcceptTcpClient();
+                NetworkStream stream = client.GetStream();
+                players[i] = new Player(client, stream, i);
+
+                // Ожидание приветственного сообщения PlayerData
+                players[i].RecieveMessageAsync();
+                players[i].ThreadingTask.Wait();
+
+                // Принятие и присваивание никнейма игрока
+                PlayerData pd = JsonSerializer.Deserialize<PlayerData>(players[i].ThreadingTask.Result);
+                players[i].NickName = pd.NickName;
+                Console.WriteLine("Подключился " + pd.NickName + " пользователь " + players[i].TcpClient.Client.RemoteEndPoint.ToString());
 
                 // Отсылаем номер игрока и информацию о столе
-                string message = "order;" + i.ToString() + ";" + levelData;
-                SendMessageAsync(message, streams[i], LARGE_BUFFER_SIZE);
+                PlayerInitialization pi = new PlayerInitialization(i, levelData);
+                string message = JsonSerializer.Serialize<PlayerInitialization>(pi);
+                players[i].SendMessageAsync(message, LARGE_BUFFER_SIZE);
+
+
+                // TODO если пакет не десереализуемый, абортить соединение и ожидать новый
             }
 
-
-            // Начинаем прослушивать клиентов
-            List<Task<string>> tasks = new List<Task<string>>();
-            for (int i = 0; i < countOfplayers; i++)
+            foreach (Player player in players)
             {
-                tasks.Add(RecieveMessageAsync(streams[i]));
+                player.RecieveMessageAsync();
             }
 
             while (true)
             {
                 for (int i = 0; i < countOfplayers; i++)
                 {
-                    if (tasks[i].Status == TaskStatus.RanToCompletion)
+                    if (players[i].ThreadingTask.Status == TaskStatus.RanToCompletion)
                     {
                         // Выводим сообщение, которое нам прислали
-                        Console.WriteLine("Message recieved from " + clients[i].Client.RemoteEndPoint.ToString() + ": " + tasks[i].Result);
+                        Console.WriteLine("Message recieved from " + players[i].TcpClient.Client.RemoteEndPoint.ToString() + " NICK=" + players[i].NickName + ": " + players[i].ThreadingTask.Result);
 
                         // Отсылаем пакет всем, кроме того, кто его прислал
                         for (int j = 0; j < countOfplayers; j++)
                         {
                             if (i == j) continue;
 
-                            SendMessageAsync(tasks[i].Result, streams[j]);
+                            players[j].SendMessageAsync(players[i].ThreadingTask.Result);
                         }
 
                         // Опять начинаем прослушивать клиента
-                        tasks[i] = RecieveMessageAsync(streams[i]);
+                        players[i].RecieveMessageAsync();
                     }
                 }
             }
         }
-
-
-        private static async Task SendMessageAsync(string message, NetworkStream ns, int buffSize = BUFFER_STANDART_SIZE)
-        {
-            await Task.Run(() => SendHandler(message, ns, buffSize));
-        }
-
-        private static void SendHandler(string message, NetworkStream ns, int buffSize)
-        {
-            byte[] msg = new byte[buffSize];
-            msg = Encoding.Default.GetBytes(message);  // конвертируем строку в массив байт
-
-            ns.Write(msg, 0, msg.Length);     // отправляем сообщение
-        }
-
-
-        private static async Task<String> RecieveMessageAsync(NetworkStream ns, int buffSize = BUFFER_STANDART_SIZE)
-        {
-            return await Task<String>.Run(() => RecieveHandler(ns, buffSize));
-        }
-
-
-        private static string RecieveHandler(NetworkStream ns, int buffSize)
-        {
-            byte[] msg = new byte[buffSize];     // готовим место для принятия сообщения
-            int count = ns.Read(msg, 0, msg.Length);   // читаем сообщение от клиента
-            return Encoding.Default.GetString(msg, 0, count); // выводим на экран полученное сообщение в виде строк
-        }
-
 
         private static string LoadLevel(string filename)
         {
@@ -114,8 +100,6 @@ namespace BlockWarsServerTcp
             }
             return loadedData;
         }
-
-
         private static string ChoseSave()
         {
             string searchFilter = "*.json";
