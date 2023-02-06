@@ -1,7 +1,4 @@
-﻿using System;
-
-
-[System.Serializable]
+﻿[System.Serializable]
 public struct PlayerInitialization
 {
     public string BoardData;

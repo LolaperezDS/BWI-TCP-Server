@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Collections;
 using System.IO;
 using Players;
 using System.Text.Json;
@@ -14,7 +11,6 @@ namespace BlockWarsServerTcp
 {
     class Program
     {
-        const int BUFFER_STANDART_SIZE = 1024;
         const int LARGE_BUFFER_SIZE = 2 * 65536;
         const string DATA_PATH = "/saves/";
         static void Main(string[] args)
