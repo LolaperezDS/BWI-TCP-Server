@@ -11,10 +11,11 @@ namespace BlockWarsServerTcp
 {
     class Program
     {
-        const int LARGE_BUFFER_SIZE = 2 * 65536;
-        const string DATA_PATH = "/saves/";
+        const int LARGE_BUFFER_SIZE = 65536;
+        static string DATA_PATH = AppDomain.CurrentDomain.BaseDirectory + "/saves/";
         static void Main(string[] args)
         {
+            // DebugFunction();
             // initiaization
             Console.WriteLine("Введите количество игроков: ");
             int countOfplayers = Convert.ToInt32(Console.ReadLine());
@@ -45,13 +46,12 @@ namespace BlockWarsServerTcp
                 players[i].ThreadingTask.Wait();
 
                 // Принятие и присваивание никнейма игрока
-                PlayerData pd = JsonSerializer.Deserialize<PlayerData>(players[i].ThreadingTask.Result);
-                players[i].NickName = pd.NickName;
-                Console.WriteLine("Подключился " + pd.NickName + " пользователь " + players[i].TcpClient.Client.RemoteEndPoint.ToString());
+                string PlayerNick = players[i].ThreadingTask.Result;
+                players[i].NickName = PlayerNick;
+                Console.WriteLine("Подключился " + PlayerNick + " пользователь " + players[i].TcpClient.Client.RemoteEndPoint.ToString());
 
                 // Отсылаем номер игрока и информацию о столе
-                PlayerInitialization pi = new PlayerInitialization(i, levelData);
-                string message = JsonSerializer.Serialize<PlayerInitialization>(pi);
+                string message = i.ToString() + ";" + levelData;
                 players[i].SendMessageAsync(message, LARGE_BUFFER_SIZE);
 
 
@@ -90,7 +90,7 @@ namespace BlockWarsServerTcp
         private static string LoadLevel(string filename)
         {
             string loadedData = "";
-            using (var reader = new StreamReader(DATA_PATH + filename))
+            using (var reader = new StreamReader(filename))
             {
                 loadedData = reader.ReadToEnd();
             }
@@ -117,6 +117,15 @@ namespace BlockWarsServerTcp
                 throw new Exception();
             }
             return levelNames[index];
+        }
+
+
+        private static void DebugFunction()
+        {
+            string level = LoadLevel(ChoseSave());
+            PlayerInitialization pi = new PlayerInitialization(0, level);
+            string message = JsonSerializer.Serialize<PlayerInitialization>(pi);
+            Console.Write(message);
         }
     }
 }
