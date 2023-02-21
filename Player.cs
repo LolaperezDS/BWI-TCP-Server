@@ -41,7 +41,7 @@ namespace Players
         {
             await Task.Run(() => SendHandler(message, buffSize));
         }
-        private void SendHandler(string message, int buffSize)
+        public void SendHandler(string message, int buffSize)
         {
             byte[] msg = new byte[buffSize];
             msg = Encoding.Default.GetBytes(message);  // конвертируем строку в массив байт

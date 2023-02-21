@@ -11,7 +11,7 @@ namespace BlockWarsServerTcp
 {
     class Program
     {
-        const int LARGE_BUFFER_SIZE = 65536;
+        const int LARGE_BUFFER_SIZE = 65536 * 2;
         static string DATA_PATH = AppDomain.CurrentDomain.BaseDirectory + "/saves/";
         static void Main(string[] args)
         {
@@ -38,6 +38,7 @@ namespace BlockWarsServerTcp
             {
                 // Создание объекта игрок
                 TcpClient client = server.AcceptTcpClient();
+                client.SendBufferSize = LARGE_BUFFER_SIZE;
                 NetworkStream stream = client.GetStream();
                 players[i] = new Player(client, stream, i);
 
@@ -48,13 +49,15 @@ namespace BlockWarsServerTcp
                 // Принятие и присваивание никнейма игрока
                 string PlayerNick = players[i].ThreadingTask.Result;
                 players[i].NickName = PlayerNick;
-                Console.WriteLine("Подключился " + PlayerNick + " пользователь " + players[i].TcpClient.Client.RemoteEndPoint.ToString());
+                Logger.LogInfo("Подключился " + PlayerNick + " пользователь " + players[i].TcpClient.Client.RemoteEndPoint.ToString());
 
                 // Отсылаем номер игрока и информацию о столе
                 string message = i.ToString() + ";" + levelData;
+                string messSize = message.Length.ToString();
+                players[i].SendHandler(messSize, 1024);
                 players[i].SendMessageAsync(message, LARGE_BUFFER_SIZE);
 
-
+                client.SendBufferSize = 1024 * 8;
                 // TODO если пакет не десереализуемый, абортить соединение и ожидать новый
             }
 
@@ -70,13 +73,13 @@ namespace BlockWarsServerTcp
                     if (players[i].ThreadingTask.Status == TaskStatus.RanToCompletion)
                     {
                         // Выводим сообщение, которое нам прислали
-                        Console.WriteLine("Message recieved from " + players[i].TcpClient.Client.RemoteEndPoint.ToString() + " NICK=" + players[i].NickName + ": " + players[i].ThreadingTask.Result);
-
+                        Logger.LogInfo("Message recieved from " + players[i].TcpClient.Client.RemoteEndPoint.ToString() + " Nickname = " + players[i].NickName + " \tMessage: " + players[i].ThreadingTask.Result);
+                        CheckPlayers(players);
                         // Отсылаем пакет всем, кроме того, кто его прислал
                         for (int j = 0; j < countOfplayers; j++)
                         {
                             if (i == j) continue;
-
+                            players[j].SendMessageAsync(players[i].ThreadingTask.Result.Length.ToString());
                             players[j].SendMessageAsync(players[i].ThreadingTask.Result);
                         }
 
@@ -84,6 +87,14 @@ namespace BlockWarsServerTcp
                         players[i].RecieveMessageAsync();
                     }
                 }
+            }
+        }
+
+        private static void CheckPlayers(Player[] players)
+        {
+            foreach (Player player in players)
+            {
+                Logger.LogInfo(player.NickName + " Connected: " + player.TcpClient.Connected.ToString());
             }
         }
 
