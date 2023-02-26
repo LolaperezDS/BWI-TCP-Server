@@ -70,7 +70,8 @@ namespace Players
                 int count = networkStream.Read(msg, 0, 1);
                 if (count == 0)
                 {
-                    throw new Exception("Cannot read from tcp connection");
+                    continue;
+                    // throw new Exception("Cannot read from tcp connection");
                 }
 
                 if (msg[0] == 0x01)
@@ -92,7 +93,8 @@ namespace Players
                 int count = networkStream.Read(bytes, 0, 1);
                 if (count == 0)
                 {
-                    throw new Exception("Cannot read from tcp connection");
+                    continue;
+                    // throw new Exception("Cannot read from tcp connection");
                 }
 
                 if (bytes[0] == 0x00)

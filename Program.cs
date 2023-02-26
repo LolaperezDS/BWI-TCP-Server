@@ -53,8 +53,6 @@ namespace BlockWarsServerTcp
 
                 // Отсылаем номер игрока и информацию о столе
                 string message = i.ToString() + ";" + levelData;
-                string messSize = message.Length.ToString();
-                players[i].SendHandler(messSize, 1024);
                 players[i].SendMessageAsync(message, LARGE_BUFFER_SIZE);
 
                 client.SendBufferSize = 1024 * 8;
@@ -79,7 +77,6 @@ namespace BlockWarsServerTcp
                         for (int j = 0; j < countOfplayers; j++)
                         {
                             if (i == j) continue;
-                            players[j].SendMessageAsync(players[i].ThreadingTask.Result.Length.ToString());
                             players[j].SendMessageAsync(players[i].ThreadingTask.Result);
                         }
 
