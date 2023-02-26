@@ -43,9 +43,11 @@ namespace Players
         }
         public void SendHandler(string message, int buffSize)
         {
-            byte[] msg = new byte[buffSize];
-            msg = Encoding.Default.GetBytes(message);  // конвертируем строку в массив байт
-            networkStream.Write(msg, 0, msg.Length);     // отправляем сообщение
+            byte[] msg = new byte[message.Length + 2];
+            msg[0] = 0x00;
+            Encoding.Default.GetBytes(message).CopyTo(msg, 1);  // РєРѕРЅРІРµСЂС‚РёСЂСѓРµРј СЃС‚СЂРѕРєСѓ РІ РјР°СЃСЃРёРІ Р±Р°Р№С‚
+            msg[message.Length + 2 - 1] = 0x01;
+            networkStream.Write(msg, 0, msg.Length);     // РѕС‚РїСЂР°РІР»СЏРµРј СЃРѕРѕР±С‰РµРЅРёРµ
         }
         public async void RecieveMessageAsync(int buffSize = BUFFER_STANDART_SIZE)
         {
@@ -54,9 +56,50 @@ namespace Players
         }
         private string RecieveHandler(int buffSize)
         {
-            byte[] msg = new byte[buffSize];     // готовим место для принятия сообщения
-            int count = networkStream.Read(msg, 0, msg.Length);   // читаем сообщение от клиента
-            return Encoding.Default.GetString(msg, 0, count); // выводим на экран полученное сообщение в виде строк
+            // byte[] msg = new byte[buffSize];     // РіРѕС‚РѕРІРёРј РјРµСЃС‚Рѕ РґР»СЏ РїСЂРёРЅСЏС‚РёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ
+            // int count = networkStream.Read(msg, 0, msg.Length);   // С‡РёС‚Р°РµРј СЃРѕРѕР±С‰РµРЅРёРµ РѕС‚ РєР»РёРµРЅС‚Р°
+            // return Encoding.Default.GetString(msg, 0, count); // РІС‹РІРѕРґРёРј РЅР° СЌРєСЂР°РЅ РїРѕР»СѓС‡РµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РІ РІРёРґРµ СЃС‚СЂРѕРє
+
+            GetZeroByte();
+            
+            StringBuilder stringBuilder = new StringBuilder();
+            byte[] msg = new byte[1];
+            
+            while (true)
+            {
+                int count = networkStream.Read(msg, 0, 1);
+                if (count == 0)
+                {
+                    throw new Exception("Cannot read from tcp connection");
+                }
+
+                if (msg[0] == 0x01)
+                {
+                    break;
+                }
+
+                stringBuilder.Append(Encoding.Default.GetString(msg, 0, 1));
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        private void GetZeroByte()
+        {
+            byte[] bytes = new byte[1]; 
+            while (true)
+            {
+                int count = networkStream.Read(bytes, 0, 1);
+                if (count == 0)
+                {
+                    throw new Exception("Cannot read from tcp connection");
+                }
+
+                if (bytes[0] == 0x00)
+                {
+                    return;
+                }
+            }
         }
 
     }
