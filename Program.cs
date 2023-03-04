@@ -56,8 +56,10 @@ namespace BlockWarsServerTcp
                 players[i].SendMessageAsync(message, LARGE_BUFFER_SIZE);
 
                 client.SendBufferSize = 1024 * 8;
-                // TODO если пакет не десереализуемый, абортить соединение и ожидать новый
             }
+
+            Console.Clear();
+            Console.WriteLine("Сервер запущен для " + countOfplayers + " игроков...");
 
             foreach (Player player in players)
             {
