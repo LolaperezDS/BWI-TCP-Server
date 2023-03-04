@@ -12,7 +12,7 @@ namespace BlockWarsServerTcp
     class Program
     {
         const int LARGE_BUFFER_SIZE = 65536 * 2;
-        static string DATA_PATH = AppDomain.CurrentDomain.BaseDirectory + "/saves/";
+        static string DATA_PATH = AppDomain.CurrentDomain.BaseDirectory + "\\saves\\";
         static void Main(string[] args)
         {
             // DebugFunction();
@@ -116,7 +116,7 @@ namespace BlockWarsServerTcp
             Console.WriteLine("Выберите номер:");
             for (int i = 0; i < levelNames.Length; i++)
             {
-                Console.WriteLine(i.ToString() + " - " + levelNames[i]);
+                Console.WriteLine(i.ToString() + " - " + levelNames[i].Split('\\')[levelNames[i].Split('\\').Length - 1].Split('.')[0]);
             }
             int index = Convert.ToInt32(Console.ReadLine());
             if (index < 0 || index >= levelNames.Length)
@@ -125,15 +125,6 @@ namespace BlockWarsServerTcp
                 throw new Exception();
             }
             return levelNames[index];
-        }
-
-
-        private static void DebugFunction()
-        {
-            string level = LoadLevel(ChoseSave());
-            PlayerInitialization pi = new PlayerInitialization(0, level);
-            string message = JsonSerializer.Serialize<PlayerInitialization>(pi);
-            Console.Write(message);
         }
     }
 }
